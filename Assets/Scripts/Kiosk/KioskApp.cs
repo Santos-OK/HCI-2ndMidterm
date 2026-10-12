@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -7,34 +8,23 @@ using UnityEngine.UI;
 namespace QuestKiosk
 {
     /// <summary>
-    /// Entry point of the Quest 3 loaning kiosk. It creates itself when any scene starts,
-    /// builds the Canvas UI from code and drives the screen flow.
-    /// Screens are in KioskApp.Screens.cs.
+    /// Controller of the Quest 3 loaning kiosk. It is on the KioskCanvas object of the scene
+    /// (created with the menu "Quest Kiosk > Build UI in open scene").
+    /// The look of every screen is edited in the scene. This script only shows the right screen,
+    /// writes the data (kits, times, lockers) into it and reacts to taps. See KioskLayout for the object names.
+    /// Screen logic is in KioskApp.Screens.cs.
     /// </summary>
     public partial class KioskApp : MonoBehaviour
     {
-        public const float FrameWidth = 402f;
-        public const float FrameHeight = 874f;
-
-        enum Page
-        {
-            Main,
-            Devices,
-            LoanTime,
-            Verify,
-            Review,
-            Edit,
-            Checkout,
-            Availability,
-            ReservationSaved
-        }
-
         KioskService service;
 
-        RectTransform content;   // the current screen is built in here
-        RectTransform overlay;   // messages that survive screen changes
+        readonly Dictionary<KioskPage, Transform> screens = new Dictionary<KioskPage, Transform>();
+        GameObject devicesTemplate;
+        GameObject availabilityTemplate;
+        GameObject toast;
+        Coroutine toastRoutine;
 
-        Page current = Page.Main;
+        KioskPage current = KioskPage.Main;
 
         // Current request (kept while the user moves around so valid choices are never lost)
         int selectedKit;
@@ -58,7 +48,9 @@ namespace QuestKiosk
         static void Bootstrap()
         {
             if (FindFirstObjectByType<KioskApp>() != null) return;
-            new GameObject("QuestKioskApp").AddComponent<KioskApp>();
+
+            // The open scene has no kiosk UI: build the default one so the app still runs.
+            KioskLayout.Build().AddComponent<KioskApp>();
         }
 
         void Awake()
@@ -66,9 +58,11 @@ namespace QuestKiosk
             service = new KioskService();
             service.Changed += OnServiceChanged;
 
-            EnsureEventSystem();
-            BuildCanvas();
-            Go(Page.Main);
+            if (FindFirstObjectByType<EventSystem>() == null) KioskLayout.CreateEventSystem();
+
+            FindScreens();
+            WireButtons();
+            Go(KioskPage.Main);
         }
 
         void OnDestroy()
@@ -88,7 +82,7 @@ namespace QuestKiosk
             if (pendingRebuild)
             {
                 pendingRebuild = false;
-                if (current == Page.Devices || current == Page.Availability) Rebuild();
+                if (current == KioskPage.Devices || current == KioskPage.Availability) Rebuild();
             }
         }
 
@@ -98,94 +92,97 @@ namespace QuestKiosk
             pendingRebuild = true;
         }
 
-        // ------------------------------------------------------------------ setup
+        // ------------------------------------------------------------------ scene objects
 
-        static void EnsureEventSystem()
+        void FindScreens()
         {
-            if (FindFirstObjectByType<EventSystem>() != null) return;
+            foreach (KioskPage page in Enum.GetValues(typeof(KioskPage)))
+            {
+                var s = UiKit.FindDeep(transform, KioskLayout.ScreenName(page));
+                if (s == null)
+                {
+                    Debug.LogError("[Quest Kiosk] " + KioskLayout.ScreenName(page) + " is missing under " + name +
+                        ". Rebuild the UI with Quest Kiosk > Build UI in open scene.");
+                    continue;
+                }
+                screens[page] = s;
+            }
 
-            var go = new GameObject("EventSystem", typeof(EventSystem));
-#if ENABLE_INPUT_SYSTEM
-            var module = go.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-            module.AssignDefaultActions();
-#else
-            go.AddComponent<StandaloneInputModule>();
-#endif
+            // The kit card templates are copied once per kit, the originals stay hidden.
+            devicesTemplate = HideTemplate(KioskPage.Devices);
+            availabilityTemplate = HideTemplate(KioskPage.Availability);
+
+            var t = UiKit.FindDeep(transform, "Toast");
+            if (t != null)
+            {
+                toast = t.gameObject;
+                toast.SetActive(false);
+            }
         }
 
-        void BuildCanvas()
+        GameObject HideTemplate(KioskPage page)
         {
-            var canvasGo = new GameObject("KioskCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            canvasGo.transform.SetParent(transform, false);
+            var t = Get(page, "KitCardTemplate");
+            if (t == null) return null;
+            t.gameObject.SetActive(false);
+            return t.gameObject;
+        }
 
-            var canvas = canvasGo.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 100;
+        Transform ScreenOf(KioskPage page)
+        {
+            Transform s;
+            return screens.TryGetValue(page, out s) ? s : null;
+        }
 
-            var scaler = canvasGo.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(FrameWidth, FrameHeight);
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand; // the 402x874 frame always fits
-            scaler.referencePixelsPerUnit = 100f;
+        Transform Get(KioskPage page, string objectName)
+        {
+            return UiKit.Find(ScreenOf(page), objectName);
+        }
 
-            // Background for the whole window (also the side bars on a wide screen)
-            var bgRt = UiKit.Node("PageBackground", canvasGo.transform);
-            UiKit.Stretch(bgRt);
-            var bg = bgRt.gameObject.AddComponent<Image>();
-            bg.color = UiKit.Background;
+        void SetText(KioskPage page, string objectName, string text)
+        {
+            UiKit.SetText(ScreenOf(page), objectName, text);
+        }
 
-            // The phone sized frame, same size as the Figma frames
-            var frame = UiKit.Node("KioskFrame", canvasGo.transform);
-            frame.anchorMin = new Vector2(0.5f, 0.5f);
-            frame.anchorMax = new Vector2(0.5f, 0.5f);
-            frame.pivot = new Vector2(0.5f, 0.5f);
-            frame.anchoredPosition = Vector2.zero;
-            frame.sizeDelta = new Vector2(FrameWidth, FrameHeight);
-            frame.gameObject.AddComponent<RectMask2D>();
-            var frameBg = frame.gameObject.AddComponent<Image>();
-            frameBg.color = UiKit.Background;
+        void SetShown(KioskPage page, string objectName, bool shown)
+        {
+            UiKit.SetShown(ScreenOf(page), objectName, shown);
+        }
 
-            content = UiKit.Node("Content", frame);
-            UiKit.Stretch(content);
-
-            overlay = UiKit.Node("Overlay", frame);
-            UiKit.Stretch(overlay);
+        void OnClick(KioskPage page, string objectName, UnityEngine.Events.UnityAction action)
+        {
+            UiKit.OnClick(ScreenOf(page), objectName, action);
         }
 
         // ------------------------------------------------------------------ navigation
 
-        void Go(Page page)
+        void Go(KioskPage page)
         {
             current = page;
             dropdownOpen = false;
             Rebuild();
         }
 
+        /// <summary>Shows only the current screen and writes the current data into it.</summary>
         void Rebuild()
         {
-            ClearChildren(content);
+            foreach (var pair in screens)
+            {
+                bool on = pair.Key == current;
+                if (pair.Value.gameObject.activeSelf != on) pair.Value.gameObject.SetActive(on);
+            }
 
             switch (current)
             {
-                case Page.Main: BuildMain(); break;
-                case Page.Devices: BuildDevices(); break;
-                case Page.LoanTime: BuildLoanTime(); break;
-                case Page.Verify: BuildVerify(); break;
-                case Page.Review: BuildReview(); break;
-                case Page.Edit: BuildEdit(); break;
-                case Page.Checkout: BuildCheckout(); break;
-                case Page.Availability: BuildAvailability(); break;
-                case Page.ReservationSaved: BuildReservationSaved(); break;
-            }
-        }
-
-        static void ClearChildren(Transform parent)
-        {
-            for (int i = parent.childCount - 1; i >= 0; i--)
-            {
-                var child = parent.GetChild(i).gameObject;
-                child.SetActive(false); // hide right now, Destroy only happens at the end of the frame
-                Destroy(child);
+                case KioskPage.Main: ShowMain(); break;
+                case KioskPage.Devices: ShowDevices(); break;
+                case KioskPage.LoanTime: ShowLoanTime(); break;
+                case KioskPage.Verify: ShowVerify(); break;
+                case KioskPage.Review: ShowReview(); break;
+                case KioskPage.Edit: ShowEdit(); break;
+                case KioskPage.Checkout: ShowCheckout(); break;
+                case KioskPage.Availability: ShowAvailability(); break;
+                case KioskPage.ReservationSaved: ShowReservationSaved(); break;
             }
         }
 
@@ -202,26 +199,27 @@ namespace QuestKiosk
 
         // ------------------------------------------------------------------ message
 
-        GameObject toast;
-        Coroutine toastRoutine;
-
         /// <summary>Short message at the bottom, used to explain why something was blocked.</summary>
         void ShowToast(string message)
         {
-            if (toast != null) Destroy(toast);
+            if (toast == null)
+            {
+                Debug.Log("[Quest Kiosk] " + message);
+                return;
+            }
+
+            UiKit.SetText(toast.transform, "Txt_Message", message);
+            toast.SetActive(true);
+
             if (toastRoutine != null) StopCoroutine(toastRoutine);
-
-            var bg = UiKit.Panel(overlay, "Toast", 24, 768, 354, 88, UiKit.Card);
-            UiKit.Label(bg.transform, message, 16, 8, 322, 72, 16, FontStyle.Bold, TextAnchor.MiddleLeft);
-
-            toast = bg.gameObject;
-            toastRoutine = StartCoroutine(HideToastLater(toast, 4.5f));
+            toastRoutine = StartCoroutine(HideToastLater(4.5f));
         }
 
-        IEnumerator HideToastLater(GameObject target, float seconds)
+        IEnumerator HideToastLater(float seconds)
         {
             yield return new WaitForSecondsRealtime(seconds);
-            if (target != null) Destroy(target);
+            if (toast != null) toast.SetActive(false);
+            toastRoutine = null;
         }
 
         // ------------------------------------------------------------------ shared helpers
