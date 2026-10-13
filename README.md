@@ -59,3 +59,8 @@ Now just click  on the play to run the build on unity, or open the executable fi
 
 # Download the app
 Download the app from our [Github Release](https://github.com/Santos-OK/HCI-2ndMidterm/releases/tag/v1.0.0)
+
+# Reports
+* [Design](docs/design.md)
+* [Testing](docs/testing.md)
+* [AI-use](docs/ai-use.md)
