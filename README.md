@@ -64,3 +64,6 @@ Download the app from our [Github Release](https://github.com/Santos-OK/HCI-2ndM
 * [Design](docs/design.md)
 * [Testing](docs/testing.md)
 * [AI-use](docs/ai-use.md)
+
+# Demonstration video
+Watch the [Demo video](https://drive.google.com/file/d/1kbumeSXP6Nuy_arCEQGAjL3_ZXPTiotT/view?usp=sharing)
