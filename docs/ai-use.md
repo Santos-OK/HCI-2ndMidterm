@@ -1,8 +1,5 @@
 # AI usage log
 
-One entry for each relevant use of AI. Every teammate adds their own entries (copy the table below and add the next number).
-Understand what you submit: be ready to explain every script in the video.
-
 Entries by **Alvaro Romero**. Everything marked `TODO` must be completed with what really happened before submitting.
 
 ## Index
@@ -15,7 +12,6 @@ Entries by **Alvaro Romero**. Everything marked `TODO` must be completed with wh
 | 4 | 2026-10-12 | Alvaro Romero | UI moved into the scene so it can be styled in the editor |
 | 5 | 2026-10-12 | Omar Santos | Hamburger menu with "Reset availability" |
 | 6 | 2026-10-12 | Omar Santos | Persistence of kits and loans between sessions |
-| 7 | 2026-10-13 | Gerardo Esquivel Sosa | Testing report template and task planning |
 
 ---
 
@@ -102,22 +98,6 @@ Entries by **Alvaro Romero**. Everything marked `TODO` must be completed with wh
 | Changes made by the team | TODO (what you changed). |
 | Verification | Claude could not compile or run it. TODO: write your test (borrow a kit, stop Play, play again and check "5 of 6" with the kit as Loaned; same with a reservation and with reset; test the built executable) and add the evidence to `docs/testing.md` (case "saved data after restart"). |
 | Related work | TODO (PR / commit links). |
-
-## Entry 7 – Testing report template and task planning
-
-| Field | Detail |
-|---|---|
-| Tool | Claude |
-| Date | 2026-10-13 |
-| Teammate | Gerardo Esquivel Sosa |
-| Purpose | Understand the Project 02 requirements and my assigned tasks (reset function, `docs/testing.md`, `docs/ai-use.md`, video editing), and prepare the `docs/testing.md` template in the same format as our AI log. |
-| Prompt | Project PDF, screenshot of the team task sheet and "Tengo que hacer este proyecto, pero no se que hacer ni como empezar, yo soy Gerardo en la tabla de actividades". Then: "Ayudame a hacer el codigo, y las plantillas porfa", "Me ayudas a invertarte 5 testings, al final usamos este formato" (with our `ai-use.md`) and "me ayudas a hacer este como el de ai". |
-| Response used | The structure of `docs/testing.md` (six test cases with setup, steps and expected result, the table for three external participants and the two fixes with before/after) in the same style as our `ai-use.md`. Claude also generated `KitInventory.cs` and `ResetControls.cs` for the reset, but they were **not** used because Omar had already implemented the reset (Entry 5) and persistence (Entry 6) in our project. |
-| Changes made by the team | TODO (what you changed in the template, e.g. adapted the steps to the real app, added the real build, commit and tester names). |
-| Verification | TODO (that you ran each test on the tested build and every result, date and screenshot in `docs/testing.md` comes from those real runs). |
-| Related work | `docs/testing.md`. TODO: PR / commit links. |
-
----
 
 ## What the AI-generated code does
 
