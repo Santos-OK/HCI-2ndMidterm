@@ -24,3 +24,9 @@ https://www.figma.com/design/JpCR3q9DVxC791HaLrxq4d/PartialProject01?node-id=0-1
 * Test scenario A
 * Readme.md document
 
+## How to set up the project
+> Remember to be working on unity 6000.5.4f1 version
+
+1. On the menu bar, look for the Quest Kiosk option
+![Unity menu bar](Screenshots/menu-bar.png)
+
