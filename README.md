@@ -56,3 +56,6 @@ Now just click  on the play to run the build on unity, or open the executable fi
 ### Reset inventory availability
 * If you want to reset the inventory to get everything available. Click on the hamburger menu in the main screen and select **Reset availability**\
 ![Reset availability](Screenshots/reset-availability.png)
+
+# Download the app
+Download the app from our [Github Release](https://github.com/Santos-OK/HCI-2ndMidterm/releases/tag/v1.0.0)
