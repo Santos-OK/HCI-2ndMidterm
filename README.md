@@ -46,3 +46,11 @@ After you open the project, go to **Assets/Scenes** and double click on **Main_S
 
 5. To reset the application to default click on **Saved data** it deploy a dropdown menu, to reset the application click on **Delete saved data (start from scratch)** also you can get access to the save data folder.\
 ![Saved data](Screenshots/saved-data.png)
+
+## Run the Build
+Now just click  on the play to run the build on unity, or open the executable file to use the app.
+
+### Test both scenarios
+* The project is already set to test the scenario A and scenario B, since by default, has just one kit available to reserve, that will let ou test scenario A. After that, now you can test the scenario B.
+* If you want to reset the inventory to get everything available. Click on the hamburger menu in the main screen and select **Reset availability**\
+![Reset availability](Screenshots/reset-availability.png)
